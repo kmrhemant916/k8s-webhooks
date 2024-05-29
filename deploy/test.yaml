@@ -6,6 +6,16 @@ metadata:
     logging: "objectstore"   # Label x with value y
 spec:
   containers:
-  - name: mycontainer
-    image: busybox
-    command: ["sleep", "3600"]  # Sleep for 1 hour
+    - name: mycontainer
+      image: busybox
+      command: ["sleep", "3600"]  # Sleep for 1 hour
+      volumeMounts:
+        - name: openfaas-webhook-cert
+          mountPath: /etc/webhook/certs
+          readOnly: true
+  volumes:
+    - name: openfaas-webhook-cert
+      secret:
+        secretName: openfaas-webhook-cert-secret
+  imagePullSecrets:
+    - name: ocir-auth

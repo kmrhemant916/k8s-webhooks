@@ -14,22 +14,26 @@ const (
 	Config = "config/config.yaml"
 	CertFile = "/etc/webhook/certs/tls.crt"
 	KeyFile = "/etc/webhook/certs/tls.key"
+    CAFile   = "/etc/webhook/certs/ca.crt"
 )
 
 func main() {	
-	r := routes.SetupRoutes()
-    cert, err := os.ReadFile(CertFile)
+    r := routes.SetupRoutes()
+    
+    // Load CA certificate
+    caCert, err := os.ReadFile(CAFile)
     if err != nil {
-        log.Fatalf("failed to read certificate: %v", err)
+        log.Fatalf("failed to read CA certificate: %v", err)
     }
     certPool := x509.NewCertPool()
-    certPool.AppendCertsFromPEM(cert)
+    certPool.AppendCertsFromPEM(caCert)
+    
     server := &http.Server{
         Addr:    ":443",
         Handler: r,
         TLSConfig: &tls.Config{
             ClientCAs:  certPool,
-            ClientAuth: tls.RequireAndVerifyClientCert,
+            ClientAuth: tls.VerifyClientCertIfGiven, // Optional client certificate
         },
     }
     log.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))

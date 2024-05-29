@@ -13,7 +13,8 @@ metadata:
   namespace: dev
 spec:
   dnsNames:
-    - webhook-service.dev.svc
+    - webhook-deployment.dev.svc
+    - webhook-deployment.dev.svc.cluster.local
   secretName: openfaas-webhook-cert-secret
   issuerRef:
     name: openfaas-webhook-issuer
@@ -36,7 +37,8 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:latest0
+          image: iad.ocir.io/idt7ybnr03cb/hemant:latest1234
+          # command: ["sleep", "3600"]
           ports:
             - containerPort: 443
           volumeMounts:
@@ -53,7 +55,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhook-service
+  name: webhook-deployment
   namespace: dev
 spec:
   ports:
@@ -70,10 +72,10 @@ webhooks:
   - name: webhook.dev.svc
     clientConfig:
       service:
-        name: webhook-service
+        name: webhook-deployment
         namespace: dev
         path: /mutate
-      caBundle: # This needs to be the CA bundle of the cert-manager, usually filled by cert-manager
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMvakNDQWVhZ0F3SUJBZ0lRTmc5OFN4MllVamk0RnJmazFvR3YzakFOQmdrcWhraUc5dzBCQVFzRkFEQUEKTUI0WERUSTBNRFV5T1RFek5UY3dORm9YRFRJME1EZ3lOekV6TlRjd05Gb3dBRENDQVNJd0RRWUpLb1pJaHZjTgpBUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTG9kRVRURU11VGlFRWFQRFNhZEsyVm9OZStPdTRpS29GUmlRQ000CnVBTlpaNGZsa2t0N0lqTGJFYXkxeXM3WThMVGlZN3lGNk9WaUV1Y1VhYUdna1N1RUUzUm1JYWVXZWYxTERVbXEKTXJuOVg3VVVNdDRoWjVma0kxTUh2d1dUZ3hVQmI0T3JjOG92VlhxKy9RdmJ5Y2FXRzdSK3lrazBKMmYzK0FqegoyMDl5Y0pmeHFKcUdwbXF0bmJzaUUyNDlnTjFUb2dGYlZsSG44Mk81YUxZVlJLOTQ5ZGFiYVBZdjJLNUpHWjlKCnZVN1MwWFpqSENjdUNDTGRiWU5ESkVWR1hlWlVXUE8wcEhtdnlDOE9KWlBETHgwTUJmaGI0TzhXSGRBQnJxNTgKbDQraEtQSjV1ZGtKTWdGZkpreCt4cTdjZmMybCs5ZFh4SGNwZlVMaENuOWVTRzhDQXdFQUFhTjBNSEl3RGdZRApWUjBQQVFIL0JBUURBZ1dnTUF3R0ExVWRFd0VCL3dRQ01BQXdVZ1lEVlIwUkFRSC9CRWd3Um9JYWQyVmlhRzl2CmF5MWtaWEJzYjNsdFpXNTBMbVJsZGk1emRtT0NLSGRsWW1odmIyc3RaR1Z3Ykc5NWJXVnVkQzVrWlhZdWMzWmoKTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSE90b2JJNGFESXBKUGZ3RnJ0NApPUnpEK0x3L0FCYThMSXpVQkVZZzdpMnJweE9ZWDdPM2ZHbzBWb05SR2JNd3ZzcCtYS3J3bEk1T1lPZ29mVUs5Cm55dDhWeVZqaklwcEVjcmhCbCtSYjYyeVYwRSs2WmNVd1lia3lZRWtmYWd5V1lHOVVvdmd6K28yZXVNWFlsVGwKdWJwQkNnWDB6UU5UcVAyYTVsRkY3RmpXbkNHYWdCcys1WDhUYU5KajZZQm9RajhFR2RKazlxTVVLUGdndWFTNAprRGhTRVhXMldTZVRkZjNXalJWUEJZeHFsd2h6Y2lhUlMza01STVpKTElMTndBOXJSeHg5Qm5jQnhkU25JVjVRCitZSFNSMXZsa29COUFTcGJTVUhrZm1sUjhhR0ZiTmVrS0llN1NZQ3JDaGdmb1RiVUNFOENrMURjVnFZQlBpUkIKKzhNPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     rules:
     - operations: ["CREATE"]
       apiGroups: [""]
