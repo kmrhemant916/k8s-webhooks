@@ -1,7 +1,7 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: selfsigned-issuer
+  name: openfaas-webhook-issuer
   namespace: dev
 spec:
   selfSigned: {}
@@ -9,14 +9,14 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: webhook-cert
+  name: openfaas-webhook-cert
   namespace: dev
 spec:
   dnsNames:
-  - webhook-service.dev.svc
-  secretName: webhook-cert-secret
+    - webhook-service.dev.svc
+  secretName: openfaas-webhook-cert-secret
   issuerRef:
-    name: selfsigned-issuer
+    name: openfaas-webhook-issuer
     kind: Issuer
 ---
 apiVersion: apps/v1
@@ -28,27 +28,27 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webhook
+      app: webhook-deployment
   template:
     metadata:
       labels:
-        app: webhook
+        app: webhook-deployment
     spec:
       containers:
-      - name: webhook
-        image: iad.ocir.io/idt7ybnr03cb/hemant:latest
-        ports:
-        - containerPort: 443
-        volumeMounts:
-        - name: webhook-cert
-          mountPath: /etc/webhook/certs
-          readOnly: true
+        - name: webhook
+          image: iad.ocir.io/idt7ybnr03cb/hemant:latest0
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: openfaas-webhook-cert
+              mountPath: /etc/webhook/certs
+              readOnly: true
       volumes:
-      - name: webhook-cert
-        secret:
-          secretName: webhook-cert-secret
+        - name: openfaas-webhook-cert
+          secret:
+            secretName: openfaas-webhook-cert-secret
       imagePullSecrets:
-      - name: ocir-auth
+        - name: ocir-auth
 ---
 apiVersion: v1
 kind: Service
@@ -60,7 +60,7 @@ spec:
   - port: 443
     targetPort: 443
   selector:
-    app: webhook
+    app: webhook-deployment
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
