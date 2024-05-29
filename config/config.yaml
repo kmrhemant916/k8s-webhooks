@@ -1,7 +1,7 @@
 service:
   port: "443"
 targetLabels:
-  - key: logging
+  - key: testing
     value: objectstore
 tolerations:
   - key: "platform"

@@ -3,12 +3,12 @@ kind: Pod
 metadata:
   name: mypod
   labels:
-    logging: "objectstore"   # Label x with value y
+    testing: "objectstore"
 spec:
   containers:
     - name: mycontainer
       image: busybox
-      command: ["sleep", "3600"]  # Sleep for 1 hour
+      command: ["sleep", "3600"]
       volumeMounts:
         - name: openfaas-webhook-cert
           mountPath: /etc/webhook/certs
