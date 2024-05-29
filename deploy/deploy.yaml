@@ -1,32 +1,84 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: dev
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webhook-cert
+  namespace: dev
+spec:
+  dnsNames:
+  - webhook-service.dev.svc
+  secretName: webhook-cert-secret
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pod-mutator
-  labels:
-    app: pod-mutator
+  name: webhook-deployment
+  namespace: dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pod-mutator
+      app: webhook
   template:
     metadata:
       labels:
-        app: pod-mutator
+        app: webhook
     spec:
       containers:
-        - name: pod-mutator
-          image: your-docker-image # Replace with your Docker image
-          ports:
-            - containerPort: 443
+      - name: webhook
+        image: iad.ocir.io/idt7ybnr03cb/hemant:latest
+        ports:
+        - containerPort: 443
+        volumeMounts:
+        - name: webhook-cert
+          mountPath: /etc/webhook/certs
+          readOnly: true
+      volumes:
+      - name: webhook-cert
+        secret:
+          secretName: webhook-cert-secret
+      imagePullSecrets:
+      - name: ocir-auth
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: pod-mutator
+  name: webhook-service
+  namespace: dev
 spec:
   ports:
-    - port: 443
-      targetPort: 443
+  - port: 443
+    targetPort: 443
   selector:
-    app: pod-mutator
+    app: webhook
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook-configuration
+webhooks:
+  - name: webhook.dev.svc
+    clientConfig:
+      service:
+        name: webhook-service
+        namespace: dev
+        path: /mutate
+      caBundle: # This needs to be the CA bundle of the cert-manager, usually filled by cert-manager
+    rules:
+    - operations: ["CREATE"]
+      apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
