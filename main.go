@@ -2,10 +2,11 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/kmrhemant916/k8s-webhooks/helpers"
 	"github.com/kmrhemant916/k8s-webhooks/routes"
 )
 
@@ -15,29 +16,21 @@ const (
 	KeyFile = "/etc/webhook/certs/tls.key"
 )
 
-func mustLoadCertificate(certFile string, keyFile string) tls.Certificate {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("failed to load key pair: %v", err)
-	}
-	return cert
-}
-
 func main() {	
-	c, err:= helpers.ReadConfig(Config)
-    if err != nil {
-        panic(err)
-	}
 	r := routes.SetupRoutes()
-	server := &http.Server{
-		Addr:    ":443",
-		Handler: r,
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{
-				mustLoadCertificate(CertFile, KeyFile),
-			},
-		},
-	}
-	log.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))
-	http.ListenAndServe(":"+c.Service.Port, r)
+    cert, err := os.ReadFile(CertFile)
+    if err != nil {
+        log.Fatalf("failed to read certificate: %v", err)
+    }
+    certPool := x509.NewCertPool()
+    certPool.AppendCertsFromPEM(cert)
+    server := &http.Server{
+        Addr:    ":443",
+        Handler: r,
+        TLSConfig: &tls.Config{
+            ClientCAs:  certPool,
+            ClientAuth: tls.RequireAndVerifyClientCert,
+        },
+    }
+    log.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))
 }
