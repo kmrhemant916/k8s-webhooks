@@ -11,9 +11,8 @@ const (
 	Config = "config/config.yaml"
 )
 
-func main() {
-	var config helpers.Config
-	c, err:= config.ReadConf(Config)
+func main() {	
+	c, err:= helpers.ReadConfig(Config)
     if err != nil {
         panic(err)
 	}

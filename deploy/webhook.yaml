@@ -1,0 +1,19 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: pod-mutator
+webhooks:
+  - name: pod-mutator.example.com
+    clientConfig:
+      service:
+        name: pod-mutator
+        namespace: default
+        path: /mutate-pods
+      caBundle: <ca-bundle>  # Replace with the CA bundle of your cluster
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    admissionReviewVersions: ["v1"]
+    sideEffects: None

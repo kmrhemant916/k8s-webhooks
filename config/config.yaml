@@ -1,2 +1,10 @@
 service:
-  port: "8080"
+  port: "443"
+targetLabels:
+  - key: logging
+    value: objectstore
+tolerations:
+  - key: "platform"
+    operator: "Equal"
+    value: "objectstore"
+    effect: "NoSchedule"
