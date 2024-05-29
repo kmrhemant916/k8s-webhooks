@@ -11,6 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	Config = "config/config.yaml"
+)
+
 func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
 	admissionReview := &admissionv1.AdmissionReview{}
 	err := helpers.ReadJSON(r, admissionReview)
@@ -24,14 +28,20 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	originalJSON := admissionReview.Request.Object.Raw
-	if pod.Labels["app"] == "openfaas" {
-		toleration := corev1.Toleration{
-			Key:      "platform",
-			Operator: corev1.TolerationOpEqual,
-			Value:    "arangodb",
-			Effect:   corev1.TaintEffectNoSchedule,
+	config, err:= helpers.ReadConfig(Config)
+    if err != nil {
+        panic(err)
+	}
+	for _, label := range config.TargetLabels {
+		if pod.Labels[label.Key] == label.Value {
+			toleration := corev1.Toleration{
+				Key:      config.Tolerations[0].Key,
+				Operator: corev1.TolerationOpEqual,
+				Value:    config.Tolerations[0].Value,
+				Effect:   corev1.TaintEffectNoSchedule,
+			}
+			pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
 		}
-		pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
 	}
 	mutatedJSON, err := json.Marshal(pod)
 	if err != nil {
