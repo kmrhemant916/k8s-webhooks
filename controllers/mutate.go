@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/evanphx/json-patch/v5"
 	"github.com/kmrhemant916/k8s-webhooks/helpers"
+	"github.com/wI2L/jsondiff"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -48,16 +48,17 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         helpers.HandleError(w, r, fmt.Errorf("marshal pod: %v", err))
         return
     }
-    patch, err := jsonpatch.CreateMergePatch(originalJSON, mutatedJSON)
-    if err != nil {
+	patch, err := jsondiff.Compare(originalJSON, mutatedJSON)
+	if err != nil {
         helpers.HandleError(w, r, fmt.Errorf("create JSON patch: %v", err))
         return
-    }
+	}
+    patchb, err := json.Marshal(patch)
     patchType := admissionv1.PatchTypeJSONPatch
     admissionResponse := &admissionv1.AdmissionResponse{
         UID:       admissionReview.Request.UID,
         Allowed:   true,
-        Patch:     patch,
+        Patch:     patchb,
         PatchType: &patchType,
     }
     admissionReview.Response = admissionResponse

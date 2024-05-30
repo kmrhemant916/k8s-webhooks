@@ -2,7 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: openfaas-webhook-issuer
-  namespace: dev
+  namespace: jenkins
 spec:
   selfSigned: {}
 ---
@@ -10,11 +10,11 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: openfaas-webhook-cert
-  namespace: dev
+  namespace: jenkins
 spec:
   dnsNames:
-    - webhook-deployment.dev.svc
-    - webhook-deployment.dev.svc.cluster.local
+    - webhook-deployment.jenkins.svc
+    - webhook-deployment.jenkins.svc.cluster.local
   secretName: openfaas-webhook-cert-secret
   issuerRef:
     name: openfaas-webhook-issuer
@@ -24,7 +24,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: webhook-deployment
-  namespace: dev
+  namespace: jenkins
 spec:
   replicas: 1
   selector:
@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:lat1
+          image: iad.ocir.io/idt7ybnr03cb/hemant:l1
           # command: ["sleep", "3600"]
           ports:
             - containerPort: 443
@@ -56,7 +56,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: webhook-deployment
-  namespace: dev
+  namespace: jenkins
 spec:
   ports:
   - port: 443
@@ -69,13 +69,13 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: webhook-configuration
 webhooks:
-  - name: webhook.dev.svc
+  - name: webhook.jenkins.svc
     clientConfig:
       service:
         name: webhook-deployment
-        namespace: dev
+        namespace: jenkins
         path: /mutate
-      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMvakNDQWVhZ0F3SUJBZ0lRTmc5OFN4MllVamk0RnJmazFvR3YzakFOQmdrcWhraUc5dzBCQVFzRkFEQUEKTUI0WERUSTBNRFV5T1RFek5UY3dORm9YRFRJME1EZ3lOekV6TlRjd05Gb3dBRENDQVNJd0RRWUpLb1pJaHZjTgpBUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTG9kRVRURU11VGlFRWFQRFNhZEsyVm9OZStPdTRpS29GUmlRQ000CnVBTlpaNGZsa2t0N0lqTGJFYXkxeXM3WThMVGlZN3lGNk9WaUV1Y1VhYUdna1N1RUUzUm1JYWVXZWYxTERVbXEKTXJuOVg3VVVNdDRoWjVma0kxTUh2d1dUZ3hVQmI0T3JjOG92VlhxKy9RdmJ5Y2FXRzdSK3lrazBKMmYzK0FqegoyMDl5Y0pmeHFKcUdwbXF0bmJzaUUyNDlnTjFUb2dGYlZsSG44Mk81YUxZVlJLOTQ5ZGFiYVBZdjJLNUpHWjlKCnZVN1MwWFpqSENjdUNDTGRiWU5ESkVWR1hlWlVXUE8wcEhtdnlDOE9KWlBETHgwTUJmaGI0TzhXSGRBQnJxNTgKbDQraEtQSjV1ZGtKTWdGZkpreCt4cTdjZmMybCs5ZFh4SGNwZlVMaENuOWVTRzhDQXdFQUFhTjBNSEl3RGdZRApWUjBQQVFIL0JBUURBZ1dnTUF3R0ExVWRFd0VCL3dRQ01BQXdVZ1lEVlIwUkFRSC9CRWd3Um9JYWQyVmlhRzl2CmF5MWtaWEJzYjNsdFpXNTBMbVJsZGk1emRtT0NLSGRsWW1odmIyc3RaR1Z3Ykc5NWJXVnVkQzVrWlhZdWMzWmoKTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSE90b2JJNGFESXBKUGZ3RnJ0NApPUnpEK0x3L0FCYThMSXpVQkVZZzdpMnJweE9ZWDdPM2ZHbzBWb05SR2JNd3ZzcCtYS3J3bEk1T1lPZ29mVUs5Cm55dDhWeVZqaklwcEVjcmhCbCtSYjYyeVYwRSs2WmNVd1lia3lZRWtmYWd5V1lHOVVvdmd6K28yZXVNWFlsVGwKdWJwQkNnWDB6UU5UcVAyYTVsRkY3RmpXbkNHYWdCcys1WDhUYU5KajZZQm9RajhFR2RKazlxTVVLUGdndWFTNAprRGhTRVhXMldTZVRkZjNXalJWUEJZeHFsd2h6Y2lhUlMza01STVpKTElMTndBOXJSeHg5Qm5jQnhkU25JVjVRCitZSFNSMXZsa29COUFTcGJTVUhrZm1sUjhhR0ZiTmVrS0llN1NZQ3JDaGdmb1RiVUNFOENrMURjVnFZQlBpUkIKKzhNPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQWUrZ0F3SUJBZ0lSQUpBdHI5YS9ib0hjSEtxejVrNjJYSk13RFFZSktvWklodmNOQVFFTEJRQXcKQURBZUZ3MHlOREExTXpBd05qSXdNemhhRncweU5EQTRNamd3TmpJd016aGFNQUF3Z2dFaU1BMEdDU3FHU0liMwpEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUMwam00Q1M1ZTV5ZE13Ulh6MjBLa2NvWStQUU5uSm1XZjJPMUxVCnNPNE9QZDJjbmxVbFdIQkRudGhQY2E1b2N4RzlCN2JOczQrSWtKMEhFbjUyUjkwRndPQnZEWUZsbzk1amwzbG4KSjdjcFR5WWRuRk1QYzVxd3o0R1FpZUtyd1pCem1JdjRFZktrTG9iQjNEM2puaDZDZExhTEN5SEdLeHBuQTBwWQp0YmNub0FYNGY0citYSGUyaDBHaVJ5cHVoVEIyN2syUkF4NmRpSXlQdGxvUVVwb282MXdpcHNKbEpIdFpNTm1pCnN0V1Jzc0tIa3h2NE9GM2U3cjFDcFptWXY4b3NwTWZVY3U3L3hxMlBWWG9QeGRPbFAxTFp2ekNkTlJpaW1Wd3EKNmUvZmF2UWZwdnhEcFBKTndlSHF0YXdUTmcxU05YTERGUkRhUlJOVWFIelJxcDYzQWdNQkFBR2pmREI2TUE0RwpBMVVkRHdFQi93UUVBd0lGb0RBTUJnTlZIUk1CQWY4RUFqQUFNRm9HQTFVZEVRRUIvd1JRTUU2Q0huZGxZbWh2CmIyc3RaR1Z3Ykc5NWJXVnVkQzVxWlc1cmFXNXpMbk4yWTRJc2QyVmlhRzl2YXkxa1pYQnNiM2x0Wlc1MExtcGwKYm10cGJuTXVjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSVlxU2lPUQpzbWZmR3dwSGZZSXNlM2ZEUi82Zmdkb3FvMU9vbjZ3c2w5WE1rSFRDM0d0bDFiczR2ZEpTSS91MzBDQldLUSs0ClV2T0NpUTNOeEtUOStSUkpxMTdzSWR5N1F4cUFkUnlpMTdFMjU1U0IvY2pCVkNvQk1TdDdEa1BDM0J3WitlejUKcEt3N1lyOC9FM2ZkcDkycVhlU3k1TUN1UWJGQWlrUUZBU2FYczM2SU8vZktBK08xcWt1dVpET0U2bkcrSjk5UQpJcDJvcDlTemhrK2hqdVVaR2pFSlcrMXBYUnNONFlNQUFDQUU0RmlIRlRFa1JyWTlib2F3dHRjYjNkUjRCakpRCkIzbG5vdGVRbUZTbEZ0bjZKUllSYlR0cnNrRmM0ejhQdGd5WWR0bDFZZmZNSnBMTndHNXF4TWo2dmRGeFkrRmoKaEdFc2EwNUVRTHhIazFrPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     rules:
     - operations: ["CREATE"]
       apiGroups: [""]
