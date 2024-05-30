@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:l2
+          image: iad.ocir.io/idt7ybnr03cb/hemant:l3
           # command: ["sleep", "3600"]
           ports:
             - containerPort: 443

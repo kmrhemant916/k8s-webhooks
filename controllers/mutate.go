@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 
 	"github.com/kmrhemant916/k8s-webhooks/helpers"
 	"github.com/wI2L/jsondiff"
@@ -49,6 +50,15 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
             pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
             break
         }
+    }
+    if pod.Spec.NodeSelector == nil {
+        pod.Spec.NodeSelector = make(map[string]string)
+    }
+    selectorValues := reflect.ValueOf(config.NodeSelector)
+    for i := 0; i < selectorValues.NumField(); i++ {
+        key := selectorValues.Type().Field(i).Tag.Get("yaml")
+        value := selectorValues.Field(i).String()
+        pod.Spec.NodeSelector[key] = value
     }
     mutatedJSON, err := json.Marshal(pod)
     if err != nil {

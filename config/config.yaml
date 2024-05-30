@@ -8,3 +8,5 @@ tolerations:
     operator: "Equal"
     value: "objectstore"
     effect: "NoSchedule"
+nodeSelector:
+  agentpool: objectstore

@@ -21,6 +21,9 @@ type Config struct {
 		Value    string `yaml:"value"`
 		Effect   string `yaml:"effect"`
 	} `yaml:"tolerations"`
+	NodeSelector struct {
+		AgentPool string `yaml:"agentpool"`
+	} `yaml:"nodeSelector"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
