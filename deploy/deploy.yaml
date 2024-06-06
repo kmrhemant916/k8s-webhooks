@@ -68,19 +68,22 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: webhook-configuration
+  annotations:
+    cert-manager.io/inject-ca-from: jenkins/openfaas-webhook-cert-secret
 webhooks:
   - name: webhook.jenkins.svc
+    admissionReviewVersions:
+      - "v1beta1"
+      - "v1"
+    sideEffects: "None"
+    timeoutSeconds: 30
     clientConfig:
       service:
         name: webhook-deployment
         namespace: jenkins
         path: /mutate
-      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQWUrZ0F3SUJBZ0lSQUpBdHI5YS9ib0hjSEtxejVrNjJYSk13RFFZSktvWklodmNOQVFFTEJRQXcKQURBZUZ3MHlOREExTXpBd05qSXdNemhhRncweU5EQTRNamd3TmpJd016aGFNQUF3Z2dFaU1BMEdDU3FHU0liMwpEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUMwam00Q1M1ZTV5ZE13Ulh6MjBLa2NvWStQUU5uSm1XZjJPMUxVCnNPNE9QZDJjbmxVbFdIQkRudGhQY2E1b2N4RzlCN2JOczQrSWtKMEhFbjUyUjkwRndPQnZEWUZsbzk1amwzbG4KSjdjcFR5WWRuRk1QYzVxd3o0R1FpZUtyd1pCem1JdjRFZktrTG9iQjNEM2puaDZDZExhTEN5SEdLeHBuQTBwWQp0YmNub0FYNGY0citYSGUyaDBHaVJ5cHVoVEIyN2syUkF4NmRpSXlQdGxvUVVwb282MXdpcHNKbEpIdFpNTm1pCnN0V1Jzc0tIa3h2NE9GM2U3cjFDcFptWXY4b3NwTWZVY3U3L3hxMlBWWG9QeGRPbFAxTFp2ekNkTlJpaW1Wd3EKNmUvZmF2UWZwdnhEcFBKTndlSHF0YXdUTmcxU05YTERGUkRhUlJOVWFIelJxcDYzQWdNQkFBR2pmREI2TUE0RwpBMVVkRHdFQi93UUVBd0lGb0RBTUJnTlZIUk1CQWY4RUFqQUFNRm9HQTFVZEVRRUIvd1JRTUU2Q0huZGxZbWh2CmIyc3RaR1Z3Ykc5NWJXVnVkQzVxWlc1cmFXNXpMbk4yWTRJc2QyVmlhRzl2YXkxa1pYQnNiM2x0Wlc1MExtcGwKYm10cGJuTXVjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSVlxU2lPUQpzbWZmR3dwSGZZSXNlM2ZEUi82Zmdkb3FvMU9vbjZ3c2w5WE1rSFRDM0d0bDFiczR2ZEpTSS91MzBDQldLUSs0ClV2T0NpUTNOeEtUOStSUkpxMTdzSWR5N1F4cUFkUnlpMTdFMjU1U0IvY2pCVkNvQk1TdDdEa1BDM0J3WitlejUKcEt3N1lyOC9FM2ZkcDkycVhlU3k1TUN1UWJGQWlrUUZBU2FYczM2SU8vZktBK08xcWt1dVpET0U2bkcrSjk5UQpJcDJvcDlTemhrK2hqdVVaR2pFSlcrMXBYUnNONFlNQUFDQUU0RmlIRlRFa1JyWTlib2F3dHRjYjNkUjRCakpRCkIzbG5vdGVRbUZTbEZ0bjZKUllSYlR0cnNrRmM0ejhQdGd5WWR0bDFZZmZNSnBMTndHNXF4TWo2dmRGeFkrRmoKaEdFc2EwNUVRTHhIazFrPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     rules:
-    - operations: ["CREATE"]
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["pods"]
-    failurePolicy: Fail
-    sideEffects: None
-    admissionReviewVersions: ["v1"]
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]

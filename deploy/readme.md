@@ -1,0 +1,1 @@
+kubectl get secret openfaas-webhook-cert-secret -o jsonpath='{.data.ca\.crt}' | base64 | tr -d '\n'
