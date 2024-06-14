@@ -1,1 +1,1 @@
-CA_BUNDLE=$(kubectl get secret pod-mutating-webhook-tls -o jsonpath='{.data.ca\.crt}')
+CA_BUNDLE=$(kubectl get secret openfaas-webhook-cert-secret -o jsonpath='{.data.ca\.crt}')

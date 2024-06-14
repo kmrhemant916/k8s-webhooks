@@ -66,7 +66,7 @@ spec:
       serviceAccountName: sample-mutating-webhook
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:110433
+          image: iad.ocir.io/idt7ybnr03cb/hemant:120639
           # command: ["sleep", "3600"]
           ports:
             - containerPort: 443

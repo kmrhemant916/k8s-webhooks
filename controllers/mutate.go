@@ -8,7 +8,7 @@ import (
 	"reflect"
 
 	"github.com/kmrhemant916/k8s-webhooks/helpers"
-	"github.com/wI2L/jsondiff"
+	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -17,6 +17,7 @@ const (
 	Config = "config/config.yaml"
 )
 
+// Mutate handles the admission review request
 func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     admissionReview := &admissionv1.AdmissionReview{}
     err := json.NewDecoder(r.Body).Decode(admissionReview)
@@ -37,11 +38,12 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     
     originalJSON := admissionReview.Request.Object.Raw
     config, err := helpers.ReadConfig(Config)
-    if (err != nil) {
+    if err != nil {
         log.Printf("Error reading config: %v", err)
         panic(err)
     }
 
+    // Apply tolerations based on labels
     for _, label := range config.TargetLabels {
         if value, exists := pod.Labels[label.Key]; exists && value == label.Value {
             log.Printf("Label %s=%s matched", label.Key, value)
@@ -56,6 +58,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         }
     }
 
+    // Apply node selector
     if pod.Spec.NodeSelector == nil {
         pod.Spec.NodeSelector = make(map[string]string)
     }
@@ -66,6 +69,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         pod.Spec.NodeSelector[key] = value
     }
 
+    // Marshal the mutated pod
     mutatedJSON, err := json.Marshal(pod)
     if err != nil {
         log.Printf("Error marshalling pod: %v", err)
@@ -74,30 +78,34 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     }
     log.Printf("Mutated Pod JSON: %s", string(mutatedJSON))
 
-    patch, err := jsondiff.Compare(originalJSON, mutatedJSON)
+    // Create JSON patch
+    patch, err := jsonpatch.CreatePatch(originalJSON, mutatedJSON)
     if err != nil {
         log.Printf("Error creating JSON patch: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("create JSON patch: %v", err))
         return
     }
 
-    patchb, err := json.Marshal(patch)
+    // Marshal the JSON patch
+    patchBytes, err := json.Marshal(patch)
     if err != nil {
         log.Printf("Error marshalling patch: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("marshal patch: %v", err))
         return
     }
-    log.Printf("JSON Patch: %s", string(patchb))
+    log.Printf("JSON Patch: %s", string(patchBytes))
 
+    // Create the admission response
     patchType := admissionv1.PatchTypeJSONPatch
     admissionResponse := &admissionv1.AdmissionResponse{
         UID:       admissionReview.Request.UID,
         Allowed:   true,
-        Patch:     patchb,
+        Patch:     patchBytes,
         PatchType: &patchType,
     }
     admissionReview.Response = admissionResponse
 
+    // Marshal the admission review response
     respBytes, err := json.Marshal(admissionReview)
     if err != nil {
         log.Printf("Error marshalling admission review response: %v", err)
