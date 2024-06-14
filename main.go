@@ -11,30 +11,40 @@ import (
 )
 
 const (
-	Config = "config/config.yaml"
+	Config   = "config/config.yaml"
 	CertFile = "/etc/webhook/certs/tls.crt"
-	KeyFile = "/etc/webhook/certs/tls.key"
-    CAFile   = "/etc/webhook/certs/ca.crt"
+	KeyFile  = "/etc/webhook/certs/tls.key"
+	CAFile   = "/etc/webhook/certs/ca.crt"
 )
 
-func main() {	
-    r := routes.SetupRoutes()
-    
-    // Load CA certificate
-    caCert, err := os.ReadFile(CAFile)
-    if err != nil {
-        log.Fatalf("failed to read CA certificate: %v", err)
-    }
-    certPool := x509.NewCertPool()
-    certPool.AppendCertsFromPEM(caCert)
-    
-    server := &http.Server{
-        Addr:    ":443",
-        Handler: r,
-        TLSConfig: &tls.Config{
-            ClientCAs:  certPool,
-            ClientAuth: tls.VerifyClientCertIfGiven, // Optional client certificate
-        },
-    }
-    log.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))
+func main() {
+	r := routes.SetupRoutes()
+
+	// Load server certificate
+	cert, err := tls.LoadX509KeyPair(CertFile, KeyFile)
+	if err != nil {
+		log.Fatalf("failed to load server certificate: %v", err)
+	}
+
+	// Load CA certificate
+	caCert, err := os.ReadFile(CAFile)
+	if err != nil {
+		log.Fatalf("failed to read CA certificate: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(caCert); !ok {
+		log.Fatalf("failed to append CA certificate to pool")
+	}
+
+	server := &http.Server{
+		Addr:    ":443",
+		Handler: r,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ClientCAs:    certPool,
+			ClientAuth:   tls.VerifyClientCertIfGiven, // Optional client certificate
+		},
+	}
+
+	log.Fatal(server.ListenAndServeTLS("", ""))
 }
