@@ -54,19 +54,18 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
                 Effect:   corev1.TaintEffectNoSchedule,
             }
             pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
+            // Apply node selector
+            if pod.Spec.NodeSelector == nil {
+                pod.Spec.NodeSelector = make(map[string]string)
+            }
+            selectorValues := reflect.ValueOf(config.NodeSelector)
+            for i := 0; i < selectorValues.NumField(); i++ {
+                key := selectorValues.Type().Field(i).Tag.Get("yaml")
+                value := selectorValues.Field(i).String()
+                pod.Spec.NodeSelector[key] = value
+            }
             break
         }
-    }
-
-    // Apply node selector
-    if pod.Spec.NodeSelector == nil {
-        pod.Spec.NodeSelector = make(map[string]string)
-    }
-    selectorValues := reflect.ValueOf(config.NodeSelector)
-    for i := 0; i < selectorValues.NumField(); i++ {
-        key := selectorValues.Type().Field(i).Tag.Get("yaml")
-        value := selectorValues.Field(i).String()
-        pod.Spec.NodeSelector[key] = value
     }
 
     // Marshal the mutated pod
