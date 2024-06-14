@@ -25,6 +25,8 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         helpers.HandleError(w, r, err)
         return
     }
+    log.Printf("Admission Review: %+v", admissionReview)
+    
     pod := &corev1.Pod{}
     if err := json.Unmarshal(admissionReview.Request.Object.Raw, pod); err != nil {
         log.Printf("Error unmarshalling pod: %v", err)
@@ -32,12 +34,14 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         return
     }
     log.Printf("Original Pod: %+v", pod)
+    
     originalJSON := admissionReview.Request.Object.Raw
     config, err := helpers.ReadConfig(Config)
-    if err != nil {
+    if (err != nil) {
         log.Printf("Error reading config: %v", err)
         panic(err)
     }
+
     for _, label := range config.TargetLabels {
         if value, exists := pod.Labels[label.Key]; exists && value == label.Value {
             log.Printf("Label %s=%s matched", label.Key, value)
@@ -51,6 +55,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
             break
         }
     }
+
     if pod.Spec.NodeSelector == nil {
         pod.Spec.NodeSelector = make(map[string]string)
     }
@@ -60,6 +65,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         value := selectorValues.Field(i).String()
         pod.Spec.NodeSelector[key] = value
     }
+
     mutatedJSON, err := json.Marshal(pod)
     if err != nil {
         log.Printf("Error marshalling pod: %v", err)
@@ -67,14 +73,22 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         return
     }
     log.Printf("Mutated Pod JSON: %s", string(mutatedJSON))
-	patch, err := jsondiff.Compare(originalJSON, mutatedJSON)
-	if err != nil {
+
+    patch, err := jsondiff.Compare(originalJSON, mutatedJSON)
+    if err != nil {
         log.Printf("Error creating JSON patch: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("create JSON patch: %v", err))
         return
-	}
+    }
+
     patchb, err := json.Marshal(patch)
+    if err != nil {
+        log.Printf("Error marshalling patch: %v", err)
+        helpers.HandleError(w, r, fmt.Errorf("marshal patch: %v", err))
+        return
+    }
     log.Printf("JSON Patch: %s", string(patchb))
+
     patchType := admissionv1.PatchTypeJSONPatch
     admissionResponse := &admissionv1.AdmissionResponse{
         UID:       admissionReview.Request.UID,
@@ -83,12 +97,15 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         PatchType: &patchType,
     }
     admissionReview.Response = admissionResponse
+
     respBytes, err := json.Marshal(admissionReview)
     if err != nil {
         log.Printf("Error marshalling admission review response: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("marshal admission review: %v", err))
         return
     }
+
+    log.Printf("Admission Review Response: %s", string(respBytes))
     w.Header().Set("Content-Type", "application/json")
     w.Write(respBytes)
 }
