@@ -9,42 +9,91 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+type MockHelpers struct{}
+
 func TestMutate(t *testing.T) {
-	// Create a new instance of the App
 	app := &App{}
 
-	// Create a sample admission review request
-	admissionReview := &admissionv1.AdmissionReview{
-		Request: &admissionv1.AdmissionRequest{
-			Object: runtime.RawExtension{Raw: []byte(`{"metadata":{"name":"mypod","labels":{"app":"test"}},"spec":{"containers":[{"name":"mycontainer","image":"busybox","command":["sleep","3600"]}]},"status":{}}`)},
+	scheme := runtime.NewScheme()
+	corev1.AddToScheme(scheme)
+
+	tests := []struct {
+		name                string
+		pod                 *corev1.Pod
+		expectedStatusCode  int
+		expectedTolerations []corev1.Toleration
+		expectedNodeSelector map[string]string
+	}{
+		{
+			name: "Matching label should add toleration and node selector",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "test"},
+				},
+				Spec: corev1.PodSpec{},
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedTolerations: []corev1.Toleration{
+				{Key: "key1", Operator: corev1.TolerationOpEqual, Value: "value1", Effect: corev1.TaintEffectNoSchedule},
+			},
+			expectedNodeSelector: map[string]string{"role": "worker"},
+		},
+		{
+			name: "Non-matching label should not add toleration or node selector",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "non-matching"},
+				},
+				Spec: corev1.PodSpec{},
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedTolerations: nil,
+			expectedNodeSelector: nil,
 		},
 	}
 
-	// Marshal the admission review request
-	admissionReviewBytes, err := json.Marshal(admissionReview)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			podBytes, err := json.Marshal(tt.pod)
+			assert.NoError(t, err)
 
-	// Create a new HTTP request with the admission review request as the body
-	req := httptest.NewRequest(http.MethodPost, "/mutate", bytes.NewReader(admissionReviewBytes))
-	req.Header.Set("Content-Type", "application/json")
+			admissionReview := admissionv1.AdmissionReview{
+				Request: &admissionv1.AdmissionRequest{
+					UID: "test-uid",
+					Object: runtime.RawExtension{
+						Raw: podBytes,
+					},
+				},
+			}
 
-	// Create a new HTTP response recorder
-	w := httptest.NewRecorder()
+			arBytes, err := json.Marshal(admissionReview)
+			assert.NoError(t, err)
 
-	// Call the Mutate function with the recorder and request
-	app.Mutate(w, req)
+			req := httptest.NewRequest("POST", "/mutate", bytes.NewReader(arBytes))
+			w := httptest.NewRecorder()
 
-	// Check the response status code
-	assert.Equal(t, http.StatusOK, w.Code)
+			app.Mutate(w, req)
 
-	// Unmarshal the response body into an AdmissionReview object
-	var responseAdmissionReview admissionv1.AdmissionReview
-	err = json.NewDecoder(w.Body).Decode(&responseAdmissionReview)
-	assert.NoError(t, err)
+			resp := w.Result()
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
 
-	// Check that the response contains a patch
-	assert.NotNil(t, responseAdmissionReview.Response.Patch)
+			if resp.StatusCode == http.StatusOK {
+				var ar admissionv1.AdmissionReview
+				err := json.NewDecoder(resp.Body).Decode(&ar)
+				assert.NoError(t, err)
+
+				var pod corev1.Pod
+				err = json.Unmarshal(ar.Response.Patch, &pod)
+				assert.NoError(t, err)
+
+				assert.Equal(t, tt.expectedTolerations, pod.Spec.Tolerations)
+				assert.Equal(t, tt.expectedNodeSelector, pod.Spec.NodeSelector)
+			}
+		})
+	}
 }
