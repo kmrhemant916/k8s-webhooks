@@ -17,7 +17,6 @@ const (
 	Config = "config/config.yaml"
 )
 
-// Mutate handles the admission review request
 func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     admissionReview := &admissionv1.AdmissionReview{}
     err := json.NewDecoder(r.Body).Decode(admissionReview)
@@ -37,7 +36,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     log.Printf("Original Pod: %+v", pod)
     
     originalJSON := admissionReview.Request.Object.Raw
-    config, err := helpers.ReadConfig(Config)
+    config, err := app.ReadConfig(Config)
     if err != nil {
         log.Printf("Error reading config: %v", err)
         panic(err)
