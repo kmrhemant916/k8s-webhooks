@@ -6,7 +6,9 @@ type App struct {
 	ReadConfig func(string) (*helpers.Config, error)
 }
 
-func NewApp() (*App) {
-	app := &App{}
-	return app
+func NewApp() *App {
+    app := &App{
+        ReadConfig: helpers.ReadConfig,
+    }
+    return app
 }
