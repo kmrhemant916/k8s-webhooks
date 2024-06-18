@@ -47,22 +47,34 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     for _, label := range config.TargetLabels {
         if value, exists := pod.Labels[label.Key]; exists && value == label.Value {
             log.Printf("Label %s=%s matched", label.Key, value)
-            toleration := corev1.Toleration{
-                Key:      config.Tolerations[0].Key,
-                Operator: corev1.TolerationOpEqual,
-                Value:    config.Tolerations[0].Value,
-                Effect:   corev1.TaintEffectNoSchedule,
+            if config.Patch.Tolerations.Enable {
+                toleration := corev1.Toleration {
+                    Key:      config.Patch.Tolerations.Value[0].Key,
+                    Operator: corev1.TolerationOpEqual,
+                    Value:    config.Patch.Tolerations.Value[0].Value,
+                    Effect:   corev1.TaintEffectNoSchedule,
+                }
+                pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
             }
-            pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration)
-            if pod.Spec.NodeSelector == nil {
-                pod.Spec.NodeSelector = make(map[string]string)
+            if config.Patch.NodeSelector.Enable {
+                if pod.Spec.NodeSelector == nil {
+                    pod.Spec.NodeSelector = make(map[string]string)
+                }
+                selectorValues := reflect.ValueOf(config.Patch.NodeSelector.Value)
+                for i := 0; i < selectorValues.NumField(); i++ {
+                    key := selectorValues.Type().Field(i).Tag.Get("yaml")
+                    value := selectorValues.Field(i).String()
+                    pod.Spec.NodeSelector[key] = value
+                }
             }
-            selectorValues := reflect.ValueOf(config.NodeSelector)
-            for i := 0; i < selectorValues.NumField(); i++ {
-                key := selectorValues.Type().Field(i).Tag.Get("yaml")
-                value := selectorValues.Field(i).String()
-                pod.Spec.NodeSelector[key] = value
-            }
+			if config.Patch.ImagePullSecrets.Enable {
+				for _, secret := range config.Patch.ImagePullSecrets.Value {
+					imagePullSecret := corev1.LocalObjectReference{
+						Name: secret.Name,
+					}
+					pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, imagePullSecret)
+				}
+			}          
             break
         }
     }

@@ -15,15 +15,29 @@ type Config struct {
 		Key   string `yaml:"key"`
 		Value string `yaml:"value"`
 	} `yaml:"targetLabels"`
-	Tolerations []struct {
-		Key      string `yaml:"key"`
-		Operator string `yaml:"operator"`
-		Value    string `yaml:"value"`
-		Effect   string `yaml:"effect"`
-	} `yaml:"tolerations"`
-	NodeSelector struct {
-		AgentPool string `yaml:"agentpool"`
-	} `yaml:"nodeSelector"`
+	Patch struct {
+		Tolerations struct {
+			Enable bool `yaml:"enable"`
+			Value  []struct {
+				Key      string `yaml:"key"`
+				Operator string `yaml:"operator"`
+				Value    string `yaml:"value"`
+				Effect   string `yaml:"effect"`
+			} `yaml:"value"`
+		} `yaml:"tolerations"`
+		NodeSelector struct {
+			Enable bool `yaml:"enable"`
+			Value  struct {
+				AgentPool string `yaml:"agentpool"`
+			} `yaml:"value"`
+		} `yaml:"nodeSelector"`
+		ImagePullSecrets struct {
+			Enable bool `yaml:"enable"`
+			Value  []struct {
+				Name string `yaml:"name"`
+			} `yaml:"value"`
+		} `yaml:"imagePullSecrets"`
+	} `yaml:"patch"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
