@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// Mocking the ReadConfig function
 var mockConfig = &helpers.Config{
 	Service: struct {
 		Port string "yaml:\"port\""

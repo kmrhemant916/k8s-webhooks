@@ -25,14 +25,19 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         helpers.HandleError(w, r, err)
         return
     }
-    log.Printf("Admission Review: %+v", admissionReview)
     pod := &corev1.Pod{}
     if err := json.Unmarshal(admissionReview.Request.Object.Raw, pod); err != nil {
         log.Printf("Error unmarshalling pod: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("unmarshal to pod: %v", err))
         return
     }
-    log.Printf("Original Pod: %+v", pod)
+    podJSON, err := json.MarshalIndent(pod, "", "  ")
+    if err != nil {
+        log.Printf("Error marshalling pod to JSON: %v", err)
+        helpers.HandleError(w, r, fmt.Errorf("marshal pod to JSON: %v", err))
+        return
+    }
+    log.Printf("Original Pod: %s", string(podJSON))
     originalJSON := admissionReview.Request.Object.Raw
     config, err := app.ReadConfig(Config)
     if err != nil {
@@ -61,10 +66,10 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
             break
         }
     }
-    mutatedJSON, err := json.Marshal(pod)
+    mutatedJSON, err := json.MarshalIndent(pod, "", "  ")
     if err != nil {
-        log.Printf("Error marshalling pod: %v", err)
-        helpers.HandleError(w, r, fmt.Errorf("marshal pod: %v", err))
+        log.Printf("Error marshalling pod to JSON: %v", err)
+        helpers.HandleError(w, r, fmt.Errorf("marshal pod to JSON: %v", err))
         return
     }
     log.Printf("Mutated Pod JSON: %s", string(mutatedJSON))
@@ -74,7 +79,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         helpers.HandleError(w, r, fmt.Errorf("create JSON patch: %v", err))
         return
     }
-    patchBytes, err := json.Marshal(patch)
+    patchBytes, err := json.MarshalIndent(patch, "", "  ")
     if err != nil {
         log.Printf("Error marshalling patch: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("marshal patch: %v", err))
@@ -89,7 +94,7 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
         PatchType: &patchType,
     }
     admissionReview.Response = admissionResponse
-    respBytes, err := json.Marshal(admissionReview)
+    respBytes, err := json.MarshalIndent(admissionReview, "", "  ")
     if err != nil {
         log.Printf("Error marshalling admission review response: %v", err)
         helpers.HandleError(w, r, fmt.Errorf("marshal admission review: %v", err))
