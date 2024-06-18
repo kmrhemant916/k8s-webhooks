@@ -27,18 +27,74 @@ var mockConfig = &helpers.Config{
 	}{
 		{Key: "app", Value: "test"},
 	},
-	Tolerations: []struct {
-		Key      string "yaml:\"key\""
-		Operator string "yaml:\"operator\""
-		Value    string "yaml:\"value\""
-		Effect   string "yaml:\"effect\""
+	Patch: struct {
+		Tolerations struct {
+			Enable bool "yaml:\"enable\""
+			Value  []struct {
+				Key      string "yaml:\"key\""
+				Operator string "yaml:\"operator\""
+				Value    string "yaml:\"value\""
+				Effect   string "yaml:\"effect\""
+			} "yaml:\"value\""
+		} "yaml:\"tolerations\""
+		NodeSelector struct {
+			Enable bool "yaml:\"enable\""
+			Value  struct {
+				AgentPool string "yaml:\"agentpool\""
+			} "yaml:\"value\""
+		} "yaml:\"nodeSelector\""
+		ImagePullSecrets struct {
+			Enable bool "yaml:\"enable\""
+			Value  []struct {
+				Name string "yaml:\"name\""
+			} "yaml:\"value\""
+		} "yaml:\"imagePullSecrets\""
 	}{
-		{Key: "example-key", Operator: "Equal", Value: "example-value", Effect: "NoSchedule"},
-	},
-	NodeSelector: struct {
-		AgentPool string "yaml:\"agentpool\""
-	}{
-		AgentPool: "example-node",
+		Tolerations: struct {
+			Enable bool "yaml:\"enable\""
+			Value  []struct {
+				Key      string "yaml:\"key\""
+				Operator string "yaml:\"operator\""
+				Value    string "yaml:\"value\""
+				Effect   string "yaml:\"effect\""
+			} "yaml:\"value\""
+		}{
+			Enable: true,
+			Value: []struct {
+				Key      string "yaml:\"key\""
+				Operator string "yaml:\"operator\""
+				Value    string "yaml:\"value\""
+				Effect   string "yaml:\"effect\""
+			}{
+				{Key: "example-key", Operator: "Equal", Value: "example-value", Effect: "NoSchedule"},
+			},
+		},
+		NodeSelector: struct {
+			Enable bool "yaml:\"enable\""
+			Value  struct {
+				AgentPool string "yaml:\"agentpool\""
+			} "yaml:\"value\""
+		}{
+			Enable: true,
+			Value: struct {
+				AgentPool string "yaml:\"agentpool\""
+			}{
+				AgentPool: "example-node",
+			},
+		},
+		ImagePullSecrets: struct {
+			Enable bool "yaml:\"enable\""
+			Value  []struct {
+				Name string "yaml:\"name\""
+			} "yaml:\"value\""
+		}{
+			Enable: true,
+			Value: []struct {
+				Name string "yaml:\"name\""
+			}{
+				{Name: "acr-auth"},
+			},
+		},
 	},
 }
 
