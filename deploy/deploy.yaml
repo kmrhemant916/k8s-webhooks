@@ -90,7 +90,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: scheduler-webhook
   annotations:
-    cert-manager.io/inject-ca-from-secret: scheduler-webhook/scheduler-webhook-cert-secret
+    cert-manager.io/inject-ca-from: scheduler-webhook/scheduler-webhook-cert
 webhooks:
   - name: webhook.scheduler-webhook.svc
     admissionReviewVersions:
