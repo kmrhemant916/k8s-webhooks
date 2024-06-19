@@ -1,0 +1,274 @@
+---
+# Source: harbor-container-webhook/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: harbor-container-webhook
+  namespace: harbor-container-webhook
+  labels:
+    helm.sh/chart: harbor-container-webhook-0.7.0
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+    app.kubernetes.io/version: "0.7.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: harbor-container-webhook/templates/config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harbor-container-webhook
+  labels:
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+  namespace: harbor-container-webhook
+data:
+  webhook-config.yaml: |
+    port: 9443
+    certDir: "/etc/hcw/certs"
+    metricsAddr: ":8080"
+    healthAddr: ":8090"
+    verbose: false
+    rules:
+      null
+---
+# Source: harbor-container-webhook/templates/rbac.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: harbor-container-webhook
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+---
+# Source: harbor-container-webhook/templates/rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: harbor-container-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: harbor-container-webhook
+subjects:
+  - kind: ServiceAccount
+    name: harbor-container-webhook
+    namespace: harbor-container-webhook
+---
+# Source: harbor-container-webhook/templates/rbac.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: harbor-container-webhook
+rules:
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+---
+# Source: harbor-container-webhook/templates/rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: harbor-container-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: harbor-container-webhook
+subjects:
+  - kind: ServiceAccount
+    name: harbor-container-webhook
+---
+# Source: harbor-container-webhook/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: harbor-container-webhook
+  labels:
+    helm.sh/chart: harbor-container-webhook-0.7.0
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+    app.kubernetes.io/version: "0.7.0"
+    app.kubernetes.io/managed-by: Helm
+  namespace: harbor-container-webhook
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: https
+      name: https
+    - port: 8080
+      protocol: TCP
+      targetPort: metrics
+      name: prometheus
+  selector:
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+---
+# Source: harbor-container-webhook/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harbor-container-webhook
+  labels:
+    helm.sh/chart: harbor-container-webhook-0.7.0
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+    app.kubernetes.io/version: "0.7.0"
+    app.kubernetes.io/managed-by: Helm
+  namespace: harbor-container-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: harbor-container-webhook
+      app.kubernetes.io/instance: harbor-container-webhook
+  template:
+    metadata:
+      annotations:
+        checksum/configmap: 3a461a502becfd9cd4f87231344894f921a039f929d0b0a161ec0a818fa4ccd2
+      labels:
+        app.kubernetes.io/name: harbor-container-webhook
+        app.kubernetes.io/instance: harbor-container-webhook
+        goharbor.io/harbor-container-webhook-disable: "true"
+    spec:
+      serviceAccountName: harbor-container-webhook
+      priorityClassName: 
+      securityContext:
+        {}
+      containers:
+        - name: harbor-container-webhook
+          args:
+            - --config=/etc/hcw/config/webhook-config.yaml
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+          image: "ghcr.io/indeedeng/harbor-container-webhook:main"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: https
+              containerPort: 9443
+              protocol: TCP
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8090
+          resources:
+            {}
+          volumeMounts:
+            - mountPath: /etc/hcw/config
+              name: config
+              readOnly: true
+            - mountPath: /etc/hcw/certs
+              name: certs
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: harbor-container-webhook
+        - name: certs
+          secret:
+            secretName: harbor-container-webhook-certs
+---
+# Source: harbor-container-webhook/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-container-webhook
+  labels:
+    helm.sh/chart: harbor-container-webhook-0.7.0
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+    app.kubernetes.io/version: "0.7.0"
+    app.kubernetes.io/managed-by: Helm
+  namespace: harbor-container-webhook
+spec:
+  secretName: harbor-container-webhook-certs
+  duration: 2160h0m0s
+  renewBefore: 360h0m0s
+  commonName: harbor-container-webhook.harbor-container-webhook.svc
+  dnsNames:
+    - harbor-container-webhook
+    - harbor-container-webhook.harbor-container-webhook
+    - harbor-container-webhook.harbor-container-webhook.svc
+  issuerRef:
+    kind: Issuer
+    name: harbor-container-webhook-self-signed-issuer
+---
+# Source: harbor-container-webhook/templates/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: harbor-container-webhook-self-signed-issuer
+  labels:
+    helm.sh/chart: harbor-container-webhook-0.7.0
+    app.kubernetes.io/name: harbor-container-webhook
+    app.kubernetes.io/instance: harbor-container-webhook
+    app.kubernetes.io/version: "0.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selfSigned: {}
+---
+# Source: harbor-container-webhook/templates/webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: harbor-container-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: "harbor-container-webhook/harbor-container-webhook"
+  namespace: harbor-container-webhook
+webhooks:
+  - name: harbor-container-webhook.harbor-container-webhook.svc
+    sideEffects: None
+    matchPolicy: Equivalent
+    reinvocationPolicy: IfNeeded
+    admissionReviewVersions:
+      - v1beta1
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - "v1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+    failurePolicy: Ignore
+    clientConfig:
+      service:
+        name: harbor-container-webhook
+        namespace: harbor-container-webhook
+        path: "/webhook-v1-pod"
+    namespaceSelector:
+      matchExpressions:
+      - key: goharbor.io/harbor-container-webhook-disable
+        operator: NotIn
+        values:
+        - "true"
+    objectSelector:
+      matchExpressions:
+      - key: goharbor.io/harbor-container-webhook-disable
+        operator: NotIn
+        values:
+        - "true"
+
