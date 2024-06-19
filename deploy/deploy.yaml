@@ -38,11 +38,12 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:105553
+          image: iad.ocir.io/idt7ybnr03cb/hemant:094231
           ports:
             - containerPort: 443
           readinessProbe:
             httpGet:
+              scheme: HTTPS
               path: /healthz
               port: 443
             initialDelaySeconds: 5
@@ -50,6 +51,7 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
+              scheme: HTTPS
               path: /healthz
               port: 443
             initialDelaySeconds: 10
