@@ -16,5 +16,6 @@ func SetupRoutes() (*chi.Mux){
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Post("/mutate", app.Mutate)
+	router.Get("/healthz", app.Healthz)
 	return router
 }

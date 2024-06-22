@@ -1,120 +1,118 @@
+---
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: openfaas-webhook-issuer
-  namespace: jenkins
+  name: scheduler-issuer
+  namespace: scheduler-webhook
 spec:
   selfSigned: {}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: openfaas-webhook-cert
-  namespace: jenkins
+  name: scheduler-webhook-cert
+  namespace: scheduler-webhook
 spec:
+  secretName: scheduler-webhook-cert-secret
+  duration: 2160h0m0s
+  renewBefore: 360h0m0s
+  commonName: scheduler-webhook.scheduler-webhook.svc 
   dnsNames:
-    - webhook-deployment.jenkins.svc
-    - webhook-deployment.jenkins.svc.cluster.local
-  secretName: openfaas-webhook-cert-secret
+    - scheduler-webhook
+    - scheduler-webhook.scheduler-webhook.svc
+    - scheduler-webhook.scheduler-webhook.svc.cluster.local
   issuerRef:
-    name: openfaas-webhook-issuer
+    name: scheduler-issuer
     kind: Issuer
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: sample-mutating-webhook
-  namespace: jenkins
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: sample-mutating-webhook
-rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "watch", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: sample-mutating-webhook
-subjects:
-  - kind: ServiceAccount
-    name: sample-mutating-webhook
-    namespace: jenkins
-roleRef:
-  kind: ClusterRole
-  name: sample-mutating-webhook
-  apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhook-deployment
-  namespace: jenkins
+  name: scheduler-webhook
+  namespace: scheduler-webhook
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webhook-deployment
+      app: scheduler-webhook
   template:
     metadata:
       labels:
-        app: webhook-deployment
+        app: scheduler-webhook
     spec:
-      serviceAccountName: sample-mutating-webhook
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/hemant:141022
-          # command: ["sleep", "3600"]
+          image: iad.ocir.io/idt7ybnr03cb/hemant:094231
+          # image: iad.ocir.io/idt7ybnr03cb/hemant:145822
           ports:
             - containerPort: 443
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 443
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 443
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            failureThreshold: 3
           volumeMounts:
-            - name: openfaas-webhook-cert
+            - name: scheduler-webhook-cert
               mountPath: /etc/webhook/certs
               readOnly: true
       volumes:
-        - name: openfaas-webhook-cert
+        - name: scheduler-webhook-cert
           secret:
-            secretName: openfaas-webhook-cert-secret
+            secretName: scheduler-webhook-cert-secret
       imagePullSecrets:
         - name: ocir-auth
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhook-deployment
-  namespace: jenkins
+  name: scheduler-webhook
+  namespace: scheduler-webhook
 spec:
   ports:
   - port: 443
     targetPort: 443
   selector:
-    app: webhook-deployment
+    app: scheduler-webhook
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: webhook-configuration
-  # annotations:
-  #   cert-manager.io/inject-ca-from: jenkins/openfaas-webhook-cert-secret
-  #   certmanager.k8s.io/inject-ca-from: jenkins/openfaas-webhook-cert-secret
+  name: scheduler-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: scheduler-webhook/scheduler-webhook-cert
 webhooks:
-  - name: webhook.jenkins.svc
+  - name: webhook.scheduler-webhook.svc
     admissionReviewVersions:
       - "v1beta1"
       - "v1"
     sideEffects: "None"
     timeoutSeconds: 30
+    failurePolicy: Ignore
     clientConfig:
       service:
-        name: webhook-deployment
-        namespace: jenkins
+        name: scheduler-webhook
+        namespace: scheduler-webhook
         path: /mutate
-      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCakNDQWU2Z0F3SUJBZ0lRQkxtdk1rSENFZzJhK1NoK0toOEpqekFOQmdrcWhraUc5dzBCQVFzRkFEQUEKTUI0WERUSTBNRFl4TkRBMU1qTXpObG9YRFRJME1Ea3hNakExTWpNek5sb3dBRENDQVNJd0RRWUpLb1pJaHZjTgpBUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTFNPYmdKTGw3bkowekJGZlBiUXFSeWhqNDlBMmNtWlovWTdVdFN3CjdnNDkzWnllVlNWWWNFT2UyRTl4cm1oekViMEh0czJ6ajRpUW5RY1NmblpIM1FYQTRHOE5nV1dqM21PWGVXY24KdHlsUEpoMmNVdzl6bXJEUGdaQ0o0cXZCa0hPWWkvZ1I4cVF1aHNIY1BlT2VIb0owdG9zTEljWXJHbWNEU2xpMQp0eWVnQmZoL2l2NWNkN2FIUWFKSEttNkZNSGJ1VFpFREhwMklqSSsyV2hCU21panJYQ0ttd21Va2Uxa3cyYUt5CjFaR3l3b2VURy9nNFhkN3V2VUtsbVppL3lpeWt4OVJ5N3YvR3JZOVZlZy9GMDZVL1V0bS9NSjAxR0tLWlhDcnAKNzk5cTlCK20vRU9rOGszQjRlcTFyQk0yRFZJMWNzTVZFTnBGRTFSb2ZOR3FucmNDQXdFQUFhTjhNSG93RGdZRApWUjBQQVFIL0JBUURBZ1dnTUF3R0ExVWRFd0VCL3dRQ01BQXdXZ1lEVlIwUkFRSC9CRkF3VG9JZWQyVmlhRzl2CmF5MWtaWEJzYjNsdFpXNTBMbXBsYm10cGJuTXVjM1pqZ2l4M1pXSm9iMjlyTFdSbGNHeHZlVzFsYm5RdWFtVnUKYTJsdWN5NXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFXV2Z1YUJXUwp5cUUzRldTTlpXUTFiaERuRnd2ZCtJTDJzdE81d2QyNTB6Vmtwc2tCK0dQM1dCbzVVUkhFQkdyaDFxT0hPempwCmhCU1VyQkhRWTRUYUJscWxBZUYyaTZuVm1KdTJSdkV0K3VJSTVoU0RiYmQ2ZzhUUGJQU082djgyQjVYRXBTYmIKb0I2ZFF1LzNma05WZjhyYWxUZDU1aUpPbGFqdzBRUS8vandHUHg5RjZab0ZoMlVYaUkzemsyS1Q2eEdZaXA2Kwo1ZERtWXZsMjBwbjVObVFRY3o3aEFNb0U3bmczc0dYVHRKQnlkWXhIUE1iWm9OWldSMDJZTm5xWW1zT1ZUQ0haClNtYTI5dE5GWkw1eVYvNDFUZ21tejBRQk9iS042bmQ4MU1tMFBFbkVnRWJPVmpHRnhKM0NtMFl6VkFqZFdMaUwKUnRVSURqRUFIQVJTQmc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     rules:
       - operations: [ "CREATE", "UPDATE" ]
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
+    objectSelector:
+      matchExpressions:
+        - key: scheduler-container-webhook-enable
+          operator: In
+          values:
+            - "true"
+            - "false"

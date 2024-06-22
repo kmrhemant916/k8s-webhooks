@@ -3,10 +3,19 @@ service:
 targetLabels:
   - key: testing
     value: objectstore
-tolerations:
-  - key: "platform"
-    operator: "Equal"
-    value: "objectstore"
-    effect: "NoSchedule"
-nodeSelector:
-  agentpool: objectstore
+patch:
+  tolerations:
+    enable: true
+    value:
+      - key: "platform"
+        operator: "Equal"
+        value: "objectstore"
+        effect: "NoSchedule"
+  nodeSelector:
+    enable: true
+    value:
+      agentpool: objectstore
+  imagePullSecrets:
+    enable: true
+    value:
+      - name: acr-auth

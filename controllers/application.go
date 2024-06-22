@@ -1,8 +1,14 @@
 package controllers
 
-type App struct {}
+import "github.com/kmrhemant916/k8s-webhooks/helpers"
 
-func NewApp() (*App) {
-	app := &App{}
-	return app
+type App struct {
+	ReadConfig func(string) (*helpers.Config, error)
+}
+
+func NewApp() *App {
+    app := &App{
+        ReadConfig: helpers.ReadConfig,
+    }
+    return app
 }

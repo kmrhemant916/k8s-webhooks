@@ -4,6 +4,7 @@ metadata:
   name: mypod
   labels:
     testing: "objectstore"
+    scheduler-container-webhook-enable: "true"
 spec:
   containers:
     - name: mycontainer
