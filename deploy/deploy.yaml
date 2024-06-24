@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: iad.ocir.io/idt7ybnr03cb/scheduler-webhook:164633
+          image: iad.ocir.io/idt7ybnr03cb/scheduler-webhook:202049
           ports:
             - containerPort: 443
           readinessProbe:

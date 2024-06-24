@@ -147,22 +147,17 @@ func TestMutate(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	app := &App{ReadConfig: mockReadConfig}
-	handler := http.HandlerFunc(app.Mutate)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        app.Mutate(w, r, mockConfig)
+    })
 	handler.ServeHTTP(rr, req)
-
-	// Check the status code
 	assert.Equal(t, http.StatusOK, rr.Code)
-
-	// Check the response
 	respAdmissionReview := &admissionv1.AdmissionReview{}
 	err = json.Unmarshal(rr.Body.Bytes(), respAdmissionReview)
 	assert.NoError(t, err)
-
-	// Check the patch
 	patch := []jsonpatch.Operation{}
 	err = json.Unmarshal(respAdmissionReview.Response.Patch, &patch)
 	assert.NoError(t, err)
-
 	expectedPatch := []jsonpatch.Operation{
 		{
 			Operation: "add",
