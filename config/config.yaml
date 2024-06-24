@@ -1,8 +1,8 @@
 service:
   port: "443"
 targetLabels:
-  - key: testing
-    value: objectstore
+  - key: scheduler-container-webhook-enable
+    value: "true"
 patch:
   tolerations:
     enable: true
@@ -16,6 +16,6 @@ patch:
     value:
       agentpool: objectstore
   imagePullSecrets:
-    enable: true
+    enable: false
     value:
       - name: acr-auth
