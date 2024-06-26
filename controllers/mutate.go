@@ -13,11 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const (
-	Config = "config/config.yaml"
-)
-
-func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
+func (app *App) Mutate(w http.ResponseWriter, r *http.Request, config *helpers.Config) {
     admissionReview := &admissionv1.AdmissionReview{}
     err := json.NewDecoder(r.Body).Decode(admissionReview)
     if err != nil {
@@ -39,11 +35,6 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
     }
     log.Printf("Original Pod: %s", string(podJSON))
     originalJSON := admissionReview.Request.Object.Raw
-    config, err := app.ReadConfig(Config)
-    if err != nil {
-        log.Printf("Error reading config: %v", err)
-        panic(err)
-    }
     for _, label := range config.TargetLabels {
         if value, exists := pod.Labels[label.Key]; exists && value == label.Value {
             log.Printf("Label %s=%s matched", label.Key, value)
@@ -67,14 +58,23 @@ func (app *App) Mutate(w http.ResponseWriter, r *http.Request) {
                     pod.Spec.NodeSelector[key] = value
                 }
             }
-			if config.Patch.ImagePullSecrets.Enable {
-				for _, secret := range config.Patch.ImagePullSecrets.Value {
-					imagePullSecret := corev1.LocalObjectReference{
-						Name: secret.Name,
-					}
-					pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, imagePullSecret)
-				}
-			}          
+            if config.Patch.ImagePullSecrets.Enable {
+                for _, secret := range config.Patch.ImagePullSecrets.Value {
+                    imagePullSecret := corev1.LocalObjectReference{
+                        Name: secret.Name,
+                    }
+                    exists := false
+                    for _, existingSecret := range pod.Spec.ImagePullSecrets {
+                        if existingSecret.Name == imagePullSecret.Name {
+                            exists = true
+                            break
+                        }
+                    }
+                    if !exists {
+                        pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, imagePullSecret)
+                    }
+                }
+            }          
             break
         }
     }
